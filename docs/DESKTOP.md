@@ -5,7 +5,7 @@ Start `PenguTEX.Desktop.exe` on Windows or `PenguTEX.Desktop` on Linux in an ext
 
 1. Select Texture folder or Mod-manager profile. Profile mode reads the instance
    folder containing `ModOrganizer.ini`: MO2 on Windows, MO2 through Wine/Proton on
-   Linux, or Fluorine on Linux. Load profile names after choosing the instance.
+   Linux, or Fluorine on Linux. Select Load profiles after choosing the instance.
    For MO2 global instances, select the configuration instance folder rather than
    the manager executable's folder. Folder sources contain loose textures only.
    See [source setup](ALPHA-TESTING.md#source-setup) for locations and overrides.
@@ -24,7 +24,7 @@ Start `PenguTEX.Desktop.exe` on Windows or `PenguTEX.Desktop` on Linux in an ext
 4. Analyze. Review changed, protected, unsupported and invalid textures; search by
    path, source mod or decision reason. Source or policy edits invalidate review.
    The Coverage tab lists protected and unresolved original textures. To compare
-   against an existing output, enable "Compare against a previous output (optional)"
+   against an existing output, enable "Compare with previous output"
    to reveal its settings, then select its folder before analyzing. With comparison
    enabled, Coverage shows larger, missing and unassessed textures relative to that
    output. Turning comparison off hides its controls and excludes their values from

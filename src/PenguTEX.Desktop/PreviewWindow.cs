@@ -21,6 +21,7 @@ public sealed class PreviewWindow : Window
     public PreviewWindow(Asset asset, PlanItem item)
     {
         _asset = asset; _item = item; Title = "Texture inspection — " + item.Path; Width = 1100; Height = 760;
+        ToolTip.SetTip(_channel, "RGB ignores alpha. Alpha may contain material data.");
         _mip.Maximum = Math.Max(0, (item.Input?.MipCount ?? 1) - 1);
         if (item.Input is { } info) _mip.Value = info.DropFor(4096);
         var load = new Button { Content = "Load mip" }; load.Click += async (_, _) => await LoadAsync();
@@ -65,7 +66,7 @@ public sealed class PreviewWindow : Window
                 return (left, right);
             }, cancel.Token);
             if (cancel.IsCancellationRequested) return; (_left, _right) = pair; Display();
-            _status.Text = $"Source {_left.Width}×{_left.Height} • Proposed {_right.Width}×{_right.Height} • {_item.Input?.Format} • {_item.Reason}\nRGB is shown independently of alpha. Alpha may contain material data. Proposed pixels use the selected processing operation.";
+            _status.Text = $"Source {_left.Width}×{_left.Height} • Proposed {_right.Width}×{_right.Height} • {_item.Input?.Format} • {_item.Reason}";
         }
         catch (OperationCanceledException) { }
         catch (Exception e) { if (!cancel.IsCancellationRequested) _status.Text = e.GetBaseException().Message; }

@@ -25,15 +25,15 @@ public sealed class MainWindow : Window
     private readonly TextBox _output = Box("OutputPath"), _cache = Box("CachePath"), _maximum = Box("Maximum"),
         _normal = Box("NormalMaximum"), _material = Box("MaterialMaximum"), _height = Box("HeightMaximum"), _workers = Box("Workers"),
         _reference = Box("ReferencePath"), _replaceMod = Box("ReplaceMod");
-    private readonly CheckBox _compareReference = new() { Name = "CompareReference", Content = "Compare against a previous output (optional)", IsChecked = false };
+    private readonly CheckBox _compareReference = new() { Name = "CompareReference", Content = "Compare with previous output", IsChecked = false };
     private readonly CheckBox _completeMaterials = new() { Name = "CompleteKnownMaterials", Content = "Complete missing mipmaps" };
     private readonly CheckBox _fitReference = new() { Name = "FitReference", Content = "Fit previous dimensions and texture payload", IsChecked = false };
-    private readonly CheckBox _fitProtected = new() { Name = "FitProtectedReference", Content = "Allow this fit for protected landscapes and characters", IsChecked = false };
+    private readonly CheckBox _fitProtected = new() { Name = "FitProtectedReference", Content = "Include protected landscapes and characters", IsChecked = false };
     private readonly CheckBox _recoverRecords = new() { Name = "RecoverMipRecords", Content = "Recover supported DDS layouts" };
     private readonly CheckBox _recoverMips = new() { Name = "RecoverMipCounts", Content = "Repair mipmap counts" };
     private readonly StackPanel _comparisonOptions = new() { Name = "ComparisonOptions", Spacing = 12, IsVisible = false, IsEnabled = false };
     private readonly DataGrid _comparisonTable = new() { Name = "ReferenceTable", AutoGenerateColumns = false, IsReadOnly = true, CanUserSortColumns = true };
-    private readonly TextBlock _comparisonSummary = Text("Analyze selected originals to review coverage and exceptions.");
+    private readonly TextBlock _comparisonSummary = Text("Analyze to review coverage.");
     private readonly CheckBox _large = new() { Content = "Protect landscapes and large surfaces", IsChecked = true };
     private readonly CheckBox _characters = new() { Content = "Protect characters and faces", IsChecked = true };
     private readonly TextBox _rules = new() { Name = "PathRules", AcceptsReturn = true, MinHeight = 90, Text = "[]", TextWrapping = TextWrapping.Wrap };
@@ -41,7 +41,7 @@ public sealed class MainWindow : Window
     private readonly ComboBox _filter = new() { Name = "DecisionFilter", ItemsSource = new[] { "Changed", "All", "Protected", "Unsupported", "Invalid", "Keep" }, SelectedIndex = 0, Width = 150 };
     private readonly DataGrid _table = new() { Name = "TextureTable", AutoGenerateColumns = false, IsReadOnly = true, CanUserSortColumns = true, SelectionMode = DataGridSelectionMode.Single };
     private readonly TextBox _log = new() { Name = "JobLog", IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _summary = Text("Choose a source and analyze its textures.", 17), _detail = Text("Select a texture to inspect its decision."), _status = Text("Ready");
+    private readonly TextBlock _summary = Text("Choose a source and analyze its textures.", 17), _detail = Text("Select a texture."), _status = Text("Ready");
     private readonly ProgressBar _progress = new() { Minimum = 0, Maximum = 100, Height = 5 };
     private readonly Button _analyze = new() { Content = "Analyze textures", Name = "Analyze", Padding = new Thickness(20, 10) },
         _build = new() { Content = "Build output mod", Name = "Build", IsEnabled = false, Padding = new Thickness(20, 10) },
@@ -72,10 +72,16 @@ public sealed class MainWindow : Window
             FontSize = 14, Opacity = 0.75, VerticalAlignment = VerticalAlignment.Center };
         Tip(version, "Build: " + JobRunner.Version);
         var title = new DockPanel(); DockPanel.SetDock(version, Dock.Right); title.Children.Add(version); title.Children.Add(Text("PenguTEX", 32));
-        Tip(_completeMaterials, "Add missing smaller texture levels when supported material use is identified in the source meshes. Existing mipmaps are preserved. Review unresolved textures under Coverage.");
-        Tip(_recoverMips, "Use additional mipmaps already stored in the original texture only when its data exactly matches a complete mipmap chain. Image data is not recompressed.");
-        Tip(_recoverRecords, "Recover recognized nonstandard DDS mipmap records after checking their sizes and boundaries. Unrecognized layouts remain unchanged and appear under Coverage.");
-        Tip(_openOutput, "Open the selected output folder in your file manager. The folder must already exist.");
+        Tip(_source, "For a profile, choose the instance folder containing ModOrganizer.ini.");
+        Tip(_profile, "Used with mod-manager profile sources.");
+        Tip(_wine, "Resolve Windows paths through this Wine or Proton prefix. You can also set Linux folder overrides here.");
+        Tip(_replaceMod, "Detected automatically when the previous output is an installed mod.");
+        Tip(_fitProtected, "Allow reductions to protected landscapes and characters when fitting to a previous output.");
+        Tip(_completeMaterials, "Add missing mipmaps when source meshes identify a supported material. Existing mipmaps are preserved.");
+        Tip(_recoverMips, "Repair the declared count when the texture already contains a complete mipmap chain. Image data is preserved.");
+        Tip(_recoverRecords, "Recover recognized DDS layouts after checking record sizes and boundaries. Unknown layouts stay unchanged.");
+        Tip(_rules, "Example: [{\"Pattern\":\"textures/armor/*\",\"Maximum\":1024}]. A cap lifts character and landscape protection. Generated LOD, interface and shader textures stay protected unless the rule adds \"OverrideGeneratedProtection\":true.");
+        if (OperatingSystem.IsLinux()) Tip(_data, "For a merged Fluorine Data folder, stop its VFS session or select the unmounted original Data folder.");
         _setup = Setup();
         _tabs.ItemsSource = new[] { new TabItem { Header = "1  Source & policy", Content = new ScrollViewer { Content = _setup } },
             new TabItem { Header = "2  Review textures", Content = Review() }, new TabItem { Header = "3  Coverage", Content = ReplacementReview() },
@@ -90,7 +96,7 @@ public sealed class MainWindow : Window
         _openOutput.Click += async (_, _) => await OpenOutputFolderAsync();
         _cleanCache.Click += async (_, _) => await CleanCacheAsync();
         _cache.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) ResetCacheCleaning(); };
-        Tip(_cleanCache, "Remove cache files left by older versions and cached textures no build has used for 30 days. The first click only counts them; a second click removes them. Other files in the folder are never touched.");
+        Tip(_cleanCache, "Remove cache files from older versions and textures unused for 30 days. Click once to count, then again to remove. Other files stay.");
         _output.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) UpdateOutputFolderAction(); };
         _preview.Click += async (_, _) =>
         {
@@ -112,7 +118,7 @@ public sealed class MainWindow : Window
         _table.SelectionChanged += (_, _) =>
         {
             var item = (_table.SelectedItem as PlanRow)?.Item; _preview.IsEnabled = item?.Input is not null && !IsWorking;
-            _detail.Text = item is null ? "Select a texture to inspect its decision."
+            _detail.Text = item is null ? "Select a texture."
                 : $"{item.Path}\n{item.Origin} • {item.Category} • {item.Reason}" + (item.Material is { } material
                     ? $"\nMaterial: {material.Status.Text()} • {material.Role} • {material.UseCount} bindings\n" + string.Join("\n", material.Examples.Select(e => $"{e.Mesh} • shape {e.Shape}, shader {e.Shader}, slot {e.Slot}: {e.Detail}")) : "");
         };
@@ -171,25 +177,23 @@ public sealed class MainWindow : Window
             try { var path = await SavePath("Save JSON policy", "pengutex-policy.json"); if (path is not null) JsonFiles.Write(path, ReadSettings().Policy); }
             catch (Exception e) { _status.Text = e.Message; }
         };
-        var prefix = PathField("Wine / Proton prefix (for Windows paths)", _wine);
+        var prefix = PathField("Wine / Proton prefix", _wine);
         prefix.IsVisible = !OperatingSystem.IsWindows();
         var advanced = new StackPanel { Spacing = 12, Children = {
             Columns(PathField("Game folder override", _game), PathField("Original Data override", _data)),
             Columns(PathField("Mods override", _mods), PathField("Profiles override", _profileRoot)),
             Columns(PathField("Overwrite override", _overwrite), prefix),
             Columns(Field("INI archive list override", _ini), Field("Excluded mods (separate names with |)", _exclude)),
-            Field("Path rules (JSON; later matching rules win)", _rules),
-            Text("Example: [{\"Pattern\":\"textures/armor/*\",\"Maximum\":1024}]. A cap also lifts character and landscape protection. Generated LOD, interface and shader files stay protected unless the rule adds \"OverrideGeneratedProtection\":true.") } };
-        if (OperatingSystem.IsLinux()) advanced.Children.Add(Text("If Fluorine has mounted a merged Data folder, stop that VFS session or select its unmounted original Data folder above. MO2 through Wine/Proton can use native Linux overrides or its prefix to resolve Windows paths."));
-        _comparisonOptions.Children.Add(Columns(PathField("Previous optimized output", _reference), Field("Mod to replace (auto-detected for installed reference)", _replaceMod)));
+            Field("Path rules (JSON; later matching rules win)", _rules) } };
+        _comparisonOptions.Children.Add(Columns(PathField("Previous optimized output", _reference), Field("Mod to replace", _replaceMod)));
         _comparisonOptions.Children.Add(Columns(_fitReference, _fitProtected));
         return new StackPanel { Spacing = 16, Margin = new Thickness(0, 14, 12, 10), Children = {
             Columns(Field("Source type", _mode), Field("Preset", _preset)), PathField("Texture folder or mod-manager instance", _source),
-            Columns(Field("Profile name (profile sources only)", _profile), profileRow),
+            Columns(Field("Profile", _profile), profileRow),
             Columns(Columns(Field("Color maximum", _maximum), Field("Normal maximum", _normal)), Columns(Field("Material maximum", _material), Field("Height maximum", _height))),
             Columns(_large, _characters),
             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { import, save } },
-            Columns(PathField("Output mod folder", _output), PathField("Reusable work cache", _cache)),
+            Columns(PathField("Output mod folder", _output), PathField("Work cache", _cache)),
             _completeMaterials, _recoverMips, _recoverRecords, _compareReference,
             _comparisonOptions,
             Field("Workers (1–32)", _workers),
@@ -262,7 +266,7 @@ public sealed class MainWindow : Window
     private void InvalidatePlan(bool settingsLoaded = false)
     {
         if (_loading) return; _plan = null; _catalog = null; LastBuild = null; _table.ItemsSource = null; VisibleCount = 0;
-        _comparisonTable.ItemsSource = null; _comparisonSummary.Text = "Analyze selected originals to assess coverage.";
+        _comparisonTable.ItemsSource = null; _comparisonSummary.Text = "Analyze to review coverage.";
         _build.IsEnabled = false; _export.IsEnabled = false; _preview.IsEnabled = false;
         _summary.Text = settingsLoaded
             ? (string.IsNullOrWhiteSpace(_source.Text) ? "Choose a source and analyze its textures." : "Ready to analyze the selected source.")
@@ -303,7 +307,7 @@ public sealed class MainWindow : Window
             else
             {
                 _pruneConfirmation = path; _cleanCache.Content = $"Remove {size}";
-                _status.Text = $"Work cache: {size} left from older versions or unused for 30 days can be removed. Click the button again to remove them; {result.KeptFiles:N0} recent files stay.";
+                _status.Text = $"Work cache: {size} to remove. Click the button again to confirm; {result.KeptFiles:N0} recent files kept.";
             }
         }
         catch (Exception e) { ResetCacheCleaning(); _status.Text = "Could not clean the work cache: " + e.GetBaseException().Message; }
@@ -328,7 +332,7 @@ public sealed class MainWindow : Window
         foreach (var diagnostic in _plan.Diagnostics) AppendLog(diagnostic.Severity + ": " + diagnostic.Message);
         if (_plan.Comparison is { } comparison)
         {
-            _comparisonSummary.Text = $"Replace at: {comparison.Placement} • {comparison.LargerCount:N0} larger • {comparison.UnknownCount:N0} unassessed • {comparison.IncompleteMipCount:N0} incomplete mip chains\n{comparison.Assessment}\nOnly this installation priority is compared. Keep other settings fixed for the in-game test.";
+            _comparisonSummary.Text = $"Replace at: {comparison.Placement} • {comparison.LargerCount:N0} larger • {comparison.UnknownCount:N0} unassessed • {comparison.IncompleteMipCount:N0} incomplete mip chains\n{comparison.Assessment}";
             _comparisonTable.ItemsSource = comparison.Items.OrderByDescending(i => i.ChangeBytes ?? long.MaxValue).Select(i => new ReferenceRow(i)).ToArray();
             AppendLog(_comparisonSummary.Text);
         }
@@ -338,7 +342,7 @@ public sealed class MainWindow : Window
             _comparisonTable.ItemsSource = _plan.Coverage.Exceptions.Select(i => new NativeRow(i)).ToArray();
             AppendLog(_comparisonSummary.Text);
         }
-        _status.Text = _plan.CompleteSource ? "Analysis complete. Review changes, then build a separate output mod." : "Analysis incomplete. Resolve source errors in the log before building.";
+        _status.Text = _plan.CompleteSource ? "Analysis complete." : "Analysis incomplete. Resolve source errors in the log before building.";
     });
     public async Task BuildAsync() => await RunAsync(async (settings, progress, ct) =>
     {
@@ -352,11 +356,11 @@ public sealed class MainWindow : Window
             var recheck = new RecheckProgress(progress);
             var catalog = CatalogLoader.Load(settings.Source, recheck, ct, settings.Policy.CompleteKnownMaterials); var fresh = Planner.Analyze(catalog, settings.Policy, recheck, ct);
             string Signature(OptimizationPlan p) => JsonSerializer.Serialize(new { p.Items, p.Comparison, p.MaterialFingerprint }, JsonFiles.Options);
-            if (Signature(fresh) != Signature(previous)) throw new IOException("Source or reference winners/metadata changed. Analyze again to review the new plan.");
+            if (Signature(fresh) != Signature(previous)) throw new IOException("Source or reference changed. Analyze again.");
             return JobRunner.Build(catalog, fresh, settings.Output, settings.Cache, settings.Workers, progress, ct, processor);
         }, ct);
-        _status.Text = $"Complete: {LastBuild.Files:N0} verified textures ({LastBuild.Reused:N0} cached rebuilds reused). Output: {LastBuild.Output}. "
-            + (LastBuild.Manifest.Comparison?.Assessment ?? "Built from selected originals. Review the Coverage tab for protected or unresolved textures.");
+        _status.Text = $"Complete: {LastBuild.Files:N0} verified textures ({LastBuild.Reused:N0} cached rebuilds reused). Output: {LastBuild.Output}."
+            + (LastBuild.Manifest.Comparison is { } comparison ? " " + comparison.Assessment : "");
         AppendLog(_status.Text); _summary.Text = $"Output built • {LastBuild.Files:N0} verified textures • {LastBuild.Bytes / 1048576d:N1} MiB of overrides • {LastBuild.Seconds:F1} seconds";
     });
     private async Task RunAsync(Func<DesktopSettings, IProgress<JobProgress>, CancellationToken, Task> run)

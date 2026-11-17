@@ -6,6 +6,12 @@ its Nexus Mods changelog. Releases before 0.1.0-alpha.11 are described on the
 
 ## [Unreleased]
 
+## [0.1.0-alpha.12] - 2026-11-17
+
+- Removed repeated instructions and explanatory paragraphs from the desktop UI.
+- Changed desktop labels and status messages to use shorter text.
+- Changed advanced setup and preview notes to tooltips.
+
 ## [0.1.0-alpha.11] - 2026-11-17
 
 Build your output again: more textures are completed, protections changed and the work cache has a new layout.
