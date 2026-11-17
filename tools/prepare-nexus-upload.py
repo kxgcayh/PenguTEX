@@ -21,7 +21,7 @@ VERSION = rf'{NUMBER}\.{NUMBER}\.{NUMBER}(?:-{IDENTIFIER}(?:\.{IDENTIFIER})*)?'
 
 def release_version(tag):
     if not re.fullmatch('v' + VERSION, tag):
-        raise ValueError('Choose a release tag, such as v0.2.0 or v0.1.0-alpha.11')
+        raise ValueError('Choose a release tag, such as v0.2.0 or v0.1.0-alpha.13')
     return tag[1:]
 
 
@@ -42,8 +42,12 @@ def validate_release(tag, release, commit, runs):
     raise ValueError('The tagged build and test workflow has not completed successfully')
 
 
-def files(version):
-    return {'windows': f'PenguTEX-{version}-win-x64.zip', 'linux': f'PenguTEX-{version}-linux-x64.tar.gz'}
+def files(version, available=None):
+    linux = f'PenguTEX-{version}-linux-x64.zip'
+    legacy = f'PenguTEX-{version}-linux-x64.tar.gz'
+    if available is not None and linux not in available and legacy in available:
+        linux = legacy
+    return {'windows': f'PenguTEX-{version}-win-x64.zip', 'linux': linux}
 
 
 def verify_downloads(directory, version):
@@ -54,7 +58,7 @@ def verify_downloads(directory, version):
         if name in sums or not name or not re.fullmatch(r'[0-9a-f]{64}', checksum):
             raise ValueError('Malformed or duplicate release checksum')
         sums[name] = checksum
-    names = files(version)
+    names = files(version, sums)
     for name in names.values():
         with (directory / name).open('rb') as stream:
             if sums.get(name) != hashlib.file_digest(stream, 'sha256').hexdigest():
@@ -72,17 +76,32 @@ def verify_downloads(directory, version):
             if name not in present:
                 raise ValueError(f'Windows ZIP is missing {name}')
         packaged_version(archive.read('win-x64/VERSION'), names['windows'])
-    with tarfile.open(directory / names['linux']) as archive:
-        present = set(archive.getnames())
-        for name in ('linux-x64/PenguTEX', 'linux-x64/PenguTEX.Desktop', 'linux-x64/libpengutex_bc7.so'):
-            if name not in present:
-                raise ValueError(f'Linux archive is missing {name}')
-        packaged_version(archive.extractfile('linux-x64/VERSION').read(), names['linux'])
+    required = ('linux-x64/PenguTEX', 'linux-x64/PenguTEX.Desktop', 'linux-x64/libpengutex_bc7.so')
+    if names['linux'].endswith('.zip'):
+        with zipfile.ZipFile(directory / names['linux']) as archive:
+            if archive.testzip() is not None:
+                raise ValueError('Linux ZIP is corrupt')
+            for name in required:
+                if name not in archive.namelist():
+                    raise ValueError(f'Linux ZIP is missing {name}')
+            for name in required[:2]:
+                info = archive.getinfo(name)
+                mode = info.external_attr >> 16
+                if info.create_system != 3 or not stat.S_ISREG(mode) or not mode & 0o111:
+                    raise ValueError(f'Linux ZIP entry is not executable: {name}')
+            packaged_version(archive.read('linux-x64/VERSION'), names['linux'])
+    else:
+        with tarfile.open(directory / names['linux']) as archive:
+            present = set(archive.getnames())
+            for name in required:
+                if name not in present:
+                    raise ValueError(f'Linux archive is missing {name}')
+            packaged_version(archive.extractfile('linux-x64/VERSION').read(), names['linux'])
     return {key: directory / name for key, name in names.items()}
 
 
 def repack_linux(tarball, output):
-    """Nexus accepts ZIP, 7z and RAR archives, so the Linux .tar.gz is repacked as a ZIP.
+    """Convert older releases' Linux tarballs to a Nexus-compatible ZIP.
 
     The ZIP holds the same files with the same bytes and Unix permissions, which unzip and the
     desktop archive managers restore, so the launcher stays executable.
@@ -172,16 +191,18 @@ def main():
     def gh_json(*arguments):
         return json.loads(subprocess.check_output(['gh', *arguments], text=True))
 
-    release = gh_json('release', 'view', args.tag, '--repo', args.repo, '--json', 'tagName,isDraft,isPrerelease')
+    release = gh_json('release', 'view', args.tag, '--repo', args.repo, '--json', 'tagName,isDraft,isPrerelease,assets')
     commit = gh_json('api', f'repos/{args.repo}/commits/{args.tag}')['sha']
     runs = gh_json('api', '--method', 'GET', f'repos/{args.repo}/actions/workflows/{Path(WORKFLOW).name}/runs',
                    '-f', f'head_sha={commit}', '-f', 'event=push')['workflow_runs']
     validate_release(args.tag, release, commit, runs)
-    patterns = [argument for name in (*files(version).values(), 'SHA256SUMS') for argument in ('--pattern', name)]
+    names = files(version, {asset['name'] for asset in release['assets']})
+    patterns = [argument for name in (*names.values(), 'SHA256SUMS') for argument in ('--pattern', name)]
     subprocess.run(['gh', 'release', 'download', args.tag, '--repo', args.repo, '--dir', str(args.output), *patterns],
                    check=True)
     packages = verify_downloads(args.output, version)
-    packages['linux'] = repack_linux(packages['linux'], args.output / f'PenguTEX-{version}-linux-x64.zip')
+    if packages['linux'].suffix != '.zip':
+        packages['linux'] = repack_linux(packages['linux'], args.output / f'PenguTEX-{version}-linux-x64.zip')
     # The checked-out CHANGELOG.md, so a correction made to the notes after the release reaches Nexus.
     notes = (Path(__file__).resolve().parents[1] / 'CHANGELOG.md').read_text(encoding='utf-8')
     changelog = plain_changelog(changelog_section(notes, version))

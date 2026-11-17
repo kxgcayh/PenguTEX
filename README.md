@@ -12,7 +12,7 @@ folders. Profile scans include textures in BSAs and respect mod priority.
 Download an x64 alpha build from [Releases](https://github.com/opteron-x86/PenguTEX/releases).
 
 - Windows: extract the ZIP and run `win-x64/PenguTEX.Desktop.exe`.
-- Linux: extract the portable archive and run `linux-x64/PenguTEX.Desktop`, or make
+- Linux: extract the ZIP and run `linux-x64/PenguTEX.Desktop`, or make
   the AppImage executable and launch it.
 
 See the [installation guide](docs/DISTRIBUTION.md) for more details.

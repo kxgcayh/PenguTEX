@@ -6,6 +6,11 @@ its Nexus Mods changelog. Releases before 0.1.0-alpha.11 are described on the
 
 ## [Unreleased]
 
+## [0.1.0-alpha.13] - 2026-11-17
+
+- Changed Linux portable packages to ZIP for direct upload to Nexus Mods.
+- Changed the README to focus on installation and use.
+
 ## [0.1.0-alpha.12] - 2026-11-17
 
 - Removed repeated instructions and explanatory paragraphs from the desktop UI.

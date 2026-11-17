@@ -29,6 +29,6 @@ print(f'''{title}
 {notes}
 
 Downloads: `win-x64.zip` for Windows (extract it and run `win-x64/PenguTEX.Desktop.exe`),
-`linux-x64.tar.gz` or `x86_64.AppImage` for Linux. Alpha builds are unsigned.
+`linux-x64.zip` or `x86_64.AppImage` for Linux. Alpha builds are unsigned.
 See [installation]({base}/DISTRIBUTION.md) and the [alpha testing guide]({base}/ALPHA-TESTING.md).
 Downloads include source, dependency licenses and `SHA256SUMS`.''')

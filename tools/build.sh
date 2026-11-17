@@ -19,4 +19,4 @@ cp tools/install-desktop.sh "$payload/"
 chmod +x "$payload/install-desktop.sh"
 python3 tools/collect-licenses.py
 python3 tools/cli-smoke.py "$payload/PenguTEX"
-tar -czf "dist/PenguTEX-$version-linux-x64.tar.gz" -C dist linux-x64
+python3 tools/package-linux.py

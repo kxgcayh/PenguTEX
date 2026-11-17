@@ -18,8 +18,8 @@ versions are published as pre-releases.
 5. Tag the merge commit and push only the tag:
 
    ```bash
-   git tag -a v0.1.0-alpha.12 -m 'PenguTEX 0.1.0-alpha.12'
-   git push origin v0.1.0-alpha.12
+   git tag -a v0.1.0-alpha.13 -m 'PenguTEX 0.1.0-alpha.13'
+   git push origin v0.1.0-alpha.13
    ```
 
 The tag build checks that the tag, metainfo and changelog match the version, runs every
@@ -29,7 +29,7 @@ them pass.
 ## What is published
 
 - `PenguTEX-<version>-win-x64.zip`
-- `PenguTEX-<version>-linux-x64.tar.gz` and `PenguTEX-<version>-x86_64.AppImage`
+- `PenguTEX-<version>-linux-x64.zip` and `PenguTEX-<version>-x86_64.AppImage`
 - `PenguTEX-<version>-source.tar.gz`
 - `SHA256SUMS`
 
@@ -41,8 +41,8 @@ the tag's successful build and the version recorded inside each package, and add
 one as a new version of its file on the mod page. The previous versions are archived, and
 the mod's version and changelog are updated from `CHANGELOG.md`.
 
-Nexus accepts ZIP, 7z and RAR archives, so the Linux package is uploaded as a ZIP with the
-same contents and file permissions. The AppImage stays on GitHub.
+The workflow uploads the published Windows and Linux ZIPs unchanged. For older releases,
+it converts the Linux tarball to ZIP. The AppImage stays on GitHub.
 
 One-time setup:
 
@@ -59,7 +59,7 @@ One-time setup:
 For each release, once the tag build has finished:
 
 1. Open **Actions → Upload release to Nexus → Run workflow**.
-2. Select `master` and enter the tag, such as `v0.1.0-alpha.12`.
+2. Select `master` and enter the tag, such as `v0.1.0-alpha.13`.
 
 If an upload fails partway, check the Files and Changelog tabs on Nexus before running it
 again, so that a file is not uploaded twice. The page description and images are edited on

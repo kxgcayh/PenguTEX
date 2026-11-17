@@ -58,7 +58,8 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           path: |
-            dist/PenguTEX-*.tar.gz
+            dist/PenguTEX-*-linux-x64.zip
+            dist/PenguTEX-*-source.tar.gz
             dist/PenguTEX-*.AppImage
             dist/SHA256SUMS
             dist/RELEASE-NOTES.md
@@ -152,9 +153,9 @@ jobs:
         run: |
           if [ "$PACKAGE_MANAGER" = apt ]; then
             apt-get update
-            apt-get install -y python3 libfontconfig1 libx11-6 libice6 libsm6 libicu-dev libssl3 libxrandr2 libxi6 libxrender1 libxcursor1 libgl1 libglib2.0-0t64 xvfb xauth tar gzip libstdc++6
+            apt-get install -y python3 libfontconfig1 libx11-6 libice6 libsm6 libicu-dev libssl3 libxrandr2 libxi6 libxrender1 libxcursor1 libgl1 libglib2.0-0t64 xvfb xauth tar gzip unzip libstdc++6
           else
-            dnf install -y python3 fontconfig libX11 libICE libSM libicu openssl-libs libXrandr libXi libXrender libXcursor mesa-libGL glib2 xorg-x11-server-Xvfb xorg-x11-xauth tar gzip libstdc++
+            dnf install -y python3 fontconfig libX11 libICE libSM libicu openssl-libs libXrandr libXi libXrender libXcursor mesa-libGL glib2 xorg-x11-server-Xvfb xorg-x11-xauth tar gzip unzip libstdc++
           fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
@@ -166,7 +167,7 @@ jobs:
         run: |
           (cd artifacts && sha256sum -c SHA256SUMS)
           mkdir 'Extracted package forêt'
-          tar -xzf artifacts/PenguTEX-*-linux-x64.tar.gz -C 'Extracted package forêt'
+          unzip -q artifacts/PenguTEX-*-linux-x64.zip -d 'Extracted package forêt'
           portable="$PWD/Extracted package forêt/linux-x64"
           "$portable/PenguTEX" --version
           python3 tools/cli-smoke.py "$portable/PenguTEX"
