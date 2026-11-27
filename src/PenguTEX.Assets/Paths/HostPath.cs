@@ -85,6 +85,9 @@ public static class HostPath
                 foreach (var user in Directory.EnumerateDirectories(users).OrderBy(p => Path.GetFileName(p) == "steamuser" ? 0 : 1))
                     foreach (var name in new[] { "Documents", "My Documents" })
                         yield return Path.Combine(user, name, "My Games", vr ? "Skyrim VR" : "Skyrim Special Edition");
+            // The game runs inside the prefix and only sees its Documents (CrossOver and default Wine link those to
+            // the host's, which is then reached through the prefix). The host folder may belong to another install.
+            yield break;
         }
         var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         if (!string.IsNullOrEmpty(docs)) yield return Path.Combine(docs, "My Games", vr ? "Skyrim VR" : "Skyrim Special Edition");

@@ -6,6 +6,9 @@ its Nexus Mods changelog. Releases before 0.1.0-alpha.11 are described on the
 
 ## [Unreleased]
 
+- Changed profiles with local INIs (MO2 LocalSettings) to read archive lists only from the profile INIs, as MO2 shows the game; keys the profile omits no longer come from the Documents INI.
+- Changed scans with a Wine/Proton prefix to read only the prefix Documents INIs, never the host Documents folder of another installation.
+
 ## [0.1.0-alpha.14] - 2026-11-18
 
 Build your output again: uncompressed textures are now compressed.

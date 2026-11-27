@@ -140,7 +140,9 @@ public sealed class Mo2Profile
             candidates.Add(Path.Combine(Folder, "skyrimcustom.ini"));
             candidates.Add(Path.Combine(Folder, "skyrim.ini"));
         }
-        foreach (var docs in HostPath.GameDocuments(Instance.WinePrefix, vr))
+        // With profile-local INIs MO2 shows the game the profile's files in place of My Games, so a key the
+        // profile omits comes from the game defaults, never from the Documents INI.
+        else foreach (var docs in HostPath.GameDocuments(Instance.WinePrefix, vr))
         {
             candidates.Add(Path.Combine(docs, "SkyrimCustom.ini"));
             candidates.Add(Path.Combine(docs, "Skyrim.ini"));
