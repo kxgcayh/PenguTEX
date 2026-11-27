@@ -43,7 +43,7 @@ public class SourceTests
     }
     [Fact] public void WindowsReferenceFolderAliasesCannotOverlapOriginals()
     {
-        if (!OperatingSystem.IsWindows()) return;
+        if (!PathCase.IgnoresCase(Path.GetTempPath())) return;
         using var f = new Fixture(); string original = f.Dir("Original textures");
         f.File("Original textures/a.dds", Fixture.Dds());
         Assert.Throws<ArgumentException>(() => CatalogLoader.Load(new(Folder: original) { ReferenceFolder = original.ToUpperInvariant() }));
@@ -51,7 +51,7 @@ public class SourceTests
     }
     [Fact] public void WindowsInstalledReferenceCaseAliasKeepsItsProfilePriority()
     {
-        if (!OperatingSystem.IsWindows()) return;
+        if (!PathCase.IgnoresCase(Path.GetTempPath())) return;
         using var f = new Fixture(); var source = Setup(f);
         f.File("instance/mods/Low/textures/test.dds", Fixture.Dds());
         f.File("instance/mods/High/textures/test.dds", Fixture.Dds(8, 8));
